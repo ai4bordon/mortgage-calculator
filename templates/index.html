@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ипотечный калькулятор</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="background-shapes">
+        <div class="shape shape1"></div>
+        <div class="shape shape2"></div>
+        <div class="shape shape3"></div>
+        <div class="shape shape4"></div>
+    </div>
+
+    <main class="app-layout">
+        <div class="left-column">
+            <div class="calculator">
+                <h1>Ипотечный калькулятор</h1>
+                <p class="subtitle">Рассчитайте ваш ежемесячный платеж и общую переплату</p>
+                
+                <div class="options-container">
+                    <div class="payment-type">
+                        <input type="radio" name="payment_type" value="annuity" id="annuity-radio" checked>
+                        <label for="annuity-radio">Аннуитетный</label>
+                        <input type="radio" name="payment_type" value="differentiated" id="differentiated-radio">
+                        <label for="differentiated-radio">Дифференцированный</label>
+                    </div>
+                    <div class="installment-mode">
+                        <label for="installment-switch" class="installment-label">Рассрочка</label>
+                        <label class="switch">
+                            <input type="checkbox" id="installment-switch">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+    
+                <form id="mortgage-form">
+                    <div class="input-group">
+                        <label for="loan-amount">Сумма кредита (₽)</label>
+                        <input type="text" inputmode="decimal" id="loan-amount" placeholder="Например, 5 000 000" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="term-years">Срок (лет)</label>
+                        <input type="number" id="term-years" placeholder="Например, 20" required>
+                    </div>
+    
+                    <div class="input-group" id="interest-rate-group">
+                        <label for="interest-rate">Процентная ставка (%)</label>
+                        <input type="number" step="0.1" id="interest-rate" placeholder="Например, 8.5" required>
+                    </div>
+                    <button type="submit">Рассчитать</button>
+                </form>
+                <div id="results" class="results-container hidden">
+                    <h2>Результаты расчета</h2>
+                    <div class="result-item" id="monthly-payment-container">
+                        <span>Ежемесячный платеж</span>
+                        <strong id="monthly-payment"></strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Переплата по процентам</span>
+                        <strong id="total-overpayment"></strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Итоговая сумма выплат</span>
+                        <strong id="total-payment"></strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Необходимый доход в месяц*</span>
+                        <strong id="required-income"></strong>
+                    </div>
+                </div>
+                <p class="income-note hidden">*Расчет дохода является примерным и основан на рекомендации, что платеж по кредиту не должен превышать 50% от ежемесячного дохода.</p>
+                <div id="error-message" class="error-message hidden"></div>
+            </div>
+
+            <div id="early-repayment-container" class="repayment-container hidden">
+                <h2>Досрочное погашение</h2>
+                <p class="subtitle">Добавьте один или несколько досрочных платежей для перерасчета графика.</p>
+                <div id="early-repayment-form" class="repayment-form">
+                    <div class="repayment-inputs">
+                        <div class="input-group">
+                            <label for="repayment-month">Номер платежа</label>
+                            <input type="number" id="repayment-month" placeholder="Например, 12">
+                        </div>
+                        <div class="input-group">
+                            <label for="repayment-amount">Сумма</label>
+                            <input type="number" id="repayment-amount" placeholder="Например, 300 000">
+                        </div>
+                    </div>
+                    <div class="repayment-options">
+                        <span class="repayment-options-label">Цель погашения:</span>
+                        <div class="repayment-type">
+                            <input type="radio" name="repayment_type" value="reduce_payment" id="reduce_payment_radio" checked>
+                            <label for="reduce_payment_radio">Уменьшить платеж</label>
+                            <input type="radio" name="repayment_type" value="reduce_term" id="reduce_term_radio">
+                            <label for="reduce_term_radio">Сократить срок</label>
+                        </div>
+                    </div>
+                    <button type="button" id="add-repayment-btn" class="add-button">Добавить</button>
+                </div>
+                <div id="repayment-list-container">
+                    <h4>Планируемые погашения:</h4>
+                    <ul id="repayment-list">
+                        <!-- Planned repayments will be injected here by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="payment-schedule-container" class="schedule-container hidden">
+            <h2>График платежей</h2>
+            <div class="chart-container">
+                <canvas id="payment-chart"></canvas>
+            </div>
+            <div class="table-wrapper">
+                <table class="payment-table">
+                    <thead>
+                        <tr>
+                            <th>№</th>
+                            <th>Дата</th>
+                            <th>Сумма платежа</th>
+                            <th>Основной долг</th>
+                            <th>Проценты</th>
+                            <th>Остаток долга</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payment-table-body">
+                        <!-- Сюда будут добавляться строки графика -->
+                    </tbody>
+                </table>
+            </div>
+            <button id="export-csv" class="export-button">Экспорт в CSV</button>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 
